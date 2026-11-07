@@ -81,8 +81,13 @@ def create_loan(db: Session, loan: schemas.LoanCreate):
 
 
 # 4. Update loan application status
-def update_loan_status(db: Session, loan_id: int, new_status: str):
 
+def update_loan_status(
+    db: Session,
+    loan_id: int,
+    new_status: str,
+    remarks: str = None
+):
     loan = (
         db.query(models.LoanApplication)
         .filter(models.LoanApplication.id == loan_id)
@@ -117,9 +122,122 @@ def update_loan_status(db: Session, loan_id: int, new_status: str):
             detail=f"Cannot change status from {loan.status} to {new_status}"
         )
 
-    loan.status = new_status
+    history_entry = models.LoanStatusHistory(
+        loan_id=loan.id,
+        previous_status=loan.status,
+        new_status=new_status,
+        remarks=remarks
+    )
 
-    db.commit()
-    db.refresh(loan)
+    try:
+        loan.status = new_status
+        db.add(history_entry)
+        db.commit()
+        db.refresh(loan)
+
+    except Exception:
+        db.rollback()
+        raise
 
     return loan
+
+
+def get_loan_history(db: Session, loan_id: int):
+    loan = (
+        db.query(models.LoanApplication)
+        .filter(models.LoanApplication.id == loan_id)
+        .first()
+    )
+
+    if not loan:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan application not found"
+        )
+
+    return (
+        db.query(models.LoanStatusHistory)
+        .filter(models.LoanStatusHistory.loan_id == loan_id)
+        .order_by(models.LoanStatusHistory.changed_at.desc())
+        .all()
+    )
+
+def update_loan_status(
+    db: Session,
+    loan_id: int,
+    new_status: str,
+    remarks: str = None
+):
+    loan = (
+        db.query(models.LoanApplication)
+        .filter(models.LoanApplication.id == loan_id)
+        .first()
+    )
+
+    if not loan:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan application not found"
+        )
+
+    allowed_transitions = {
+        "PENDING": ["UNDER_REVIEW", "REJECTED"],
+        "UNDER_REVIEW": ["NEEDS_INFO", "APPROVED", "REJECTED"],
+        "NEEDS_INFO": ["UNDER_REVIEW", "REJECTED"],
+        "APPROVED": [],
+        "REJECTED": []
+    }
+
+    new_status = new_status.upper()
+
+    if new_status not in allowed_transitions:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid loan status"
+        )
+
+    if new_status not in allowed_transitions[loan.status]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change status from {loan.status} to {new_status}"
+        )
+
+    history_entry = models.LoanStatusHistory(
+        loan_id=loan.id,
+        previous_status=loan.status,
+        new_status=new_status,
+        remarks=remarks
+    )
+
+    try:
+        loan.status = new_status
+        db.add(history_entry)
+        db.commit()
+        db.refresh(loan)
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return loan
+
+
+def get_loan_history(db: Session, loan_id: int):
+    loan = (
+        db.query(models.LoanApplication)
+        .filter(models.LoanApplication.id == loan_id)
+        .first()
+    )
+
+    if not loan:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan application not found"
+        )
+
+    return (
+        db.query(models.LoanStatusHistory)
+        .filter(models.LoanStatusHistory.loan_id == loan_id)
+        .order_by(models.LoanStatusHistory.changed_at.desc())
+        .all()
+    )

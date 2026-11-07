@@ -6,3 +6,7 @@ pydantic
 email-validator
 pytest
 httpx
+streamlit
+plotly
+requests
+pandas

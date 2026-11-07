@@ -92,3 +92,32 @@ class LoanApplication(Base):
         "Customer",
         back_populates="loan_applications"
     )
+    status_history = relationship(
+    "LoanStatusHistory",
+    back_populates="loan",
+    cascade="all, delete-orphan",
+    order_by="LoanStatusHistory.changed_at"
+    )
+    
+class LoanStatusHistory(Base):
+    __tablename__ = "loan_status_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    loan_id = Column(
+        Integer,
+        ForeignKey("loan_applications.id"),
+        nullable=False
+    )
+
+    previous_status = Column(String(30), nullable=False)
+    new_status = Column(String(30), nullable=False)
+    remarks = Column(String(255), nullable=True)
+
+    changed_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+    loan = relationship("LoanApplication", back_populates="status_history")
+

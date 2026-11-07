@@ -34,7 +34,7 @@ class LoanCreate(BaseModel):
 
 class LoanStatusUpdate(BaseModel):
     status: str
-
+    remarks: Optional[str] = Field(default=None, max_length=255)
 
 class LoanResponse(BaseModel):
     id: int
@@ -48,3 +48,13 @@ class LoanResponse(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class LoanStatusHistoryResponse(BaseModel):
+    id: int
+    loan_id: int
+    previous_status: str
+    new_status: str
+    remarks: Optional[str] = None
+    changed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)    

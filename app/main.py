@@ -113,7 +113,8 @@ def change_loan_status(
     return services.update_loan_status(
         db,
         loan_id,
-        update.status
+        update.status,
+        update.remarks
     )
 
 
@@ -139,3 +140,12 @@ def get_emi(
         "tenure_months": tenure_months,
         "monthly_emi": emi
     }
+@app.get(
+    "/loans/{loan_id}/history",
+    response_model=list[schemas.LoanStatusHistoryResponse]
+)
+def get_loan_status_history(
+    loan_id: int,
+    db: Session = Depends(get_db)
+):
+    return services.get_loan_history(db, loan_id)
